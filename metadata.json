@@ -1,0 +1,6 @@
+{
+  "name": "Leixlip Weather",
+  "description": "Hyperlocal Irish weather forecasts and analysis from Leixlip, featuring the Electric Picnic 2026 outlook with the ultimate verdict: It'll be grand.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

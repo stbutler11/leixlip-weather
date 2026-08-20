@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@layer utilities {
+  /* Bento Grid dot-matrix pattern background */
+  .bg-bento-grid {
+    background-color: #020617;
+    background-image: radial-gradient(rgba(51, 65, 85, 0.4) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Bento card glass styling */
+  .bento-card {
+    background-color: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(51, 65, 85, 0.6);
+    border-radius: 1.25rem;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .bento-card:hover {
+    border-color: rgba(71, 85, 105, 0.9);
+  }
+
+  .bento-card-highlight {
+    background: linear-gradient(135deg, rgba(6, 78, 59, 0.4) 0%, rgba(15, 23, 42, 0.85) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.5);
+    box-shadow: 0 10px 30px -10px rgba(6, 78, 59, 0.5);
+  }
+}
