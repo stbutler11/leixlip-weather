@@ -53,26 +53,50 @@ export interface LiveWeatherData {
 
 // Coordinates
 export const LOCATIONS = {
-  leixlip: {
-    name: 'Leixlip',
-    county: 'Co. Kildare',
-    lat: 53.3642,
-    lon: -6.4883,
-    landmarks: 'Rye Water & Liffey Confluence',
-  },
   stradbally: {
     name: 'Stradbally Hall (Electric Picnic)',
     county: 'Co. Laois',
     lat: 53.0167,
     lon: -7.1500,
-    landmarks: 'Electric Picnic Festival Grounds',
+    landmarks: 'Electric Picnic Festival Grounds & Main Stage Field',
+    distanceFromLeixlip: '68 km via M7',
+    transitRole: 'Festival Epicentre',
+  },
+  leixlip: {
+    name: 'Leixlip',
+    county: 'Co. Kildare',
+    lat: 53.3642,
+    lon: -6.4883,
+    landmarks: 'Rye Water & Liffey Confluence, Salmon Leap',
+    distanceFromLeixlip: '0 km (Home Base)',
+    transitRole: 'Banter Meteorological HQ',
+  },
+  portlaoise: {
+    name: 'Portlaoise Hub',
+    county: 'Co. Laois',
+    lat: 53.0344,
+    lon: -7.2994,
+    landmarks: 'Train Station & EP Direct Shuttle Interchange',
+    distanceFromLeixlip: '74 km via M7',
+    transitRole: 'Festival Train Connection',
+  },
+  dublin: {
+    name: 'Dublin City & Airport',
+    county: 'Co. Dublin',
+    lat: 53.3498,
+    lon: -6.2603,
+    landmarks: 'Custom House Quay & Airport Express Coaches',
+    distanceFromLeixlip: '18 km via N4/M4',
+    transitRole: 'National Coach Departure Hub',
   },
   maynooth: {
     name: 'Maynooth',
     county: 'Co. Kildare',
     lat: 53.3813,
     lon: -6.5918,
-    landmarks: 'University Town & Castle',
+    landmarks: 'University Town & Royal Canal Gateway',
+    distanceFromLeixlip: '6 km via R148',
+    transitRole: 'North Kildare Departure Point',
   },
   celbridge: {
     name: 'Celbridge',
@@ -80,6 +104,8 @@ export const LOCATIONS = {
     lat: 53.3389,
     lon: -6.5381,
     landmarks: 'Castletown Gates & Arthur Guinness Birthplace',
+    distanceFromLeixlip: '4 km via R405',
+    transitRole: 'Mid-Kildare Transit Line',
   },
 };
 
@@ -421,3 +447,24 @@ export async function fetchLiveLeixlipWeather(
     };
   }
 }
+
+// Fetch multiple locations concurrently
+export async function fetchMultiLocationWeather(
+  locationKeys: Array<keyof typeof LOCATIONS> = ['stradbally', 'leixlip', 'portlaoise', 'dublin', 'maynooth']
+): Promise<Record<string, LiveWeatherData>> {
+  const results = await Promise.allSettled(
+    locationKeys.map(async (key) => {
+      const data = await fetchLiveLeixlipWeather(key);
+      return { key, data };
+    })
+  );
+
+  const map: Record<string, LiveWeatherData> = {};
+  for (const res of results) {
+    if (res.status === 'fulfilled') {
+      map[res.value.key] = res.value.data;
+    }
+  }
+  return map;
+}
+
