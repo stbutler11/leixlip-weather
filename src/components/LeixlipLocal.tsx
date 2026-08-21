@@ -16,7 +16,12 @@ import {
   Gauge, 
   Shirt, 
   CheckCircle2, 
-  ShieldCheck
+  ShieldCheck,
+  ExternalLink,
+  Maximize2,
+  Tv,
+  CloudRain,
+  Satellite
 } from 'lucide-react';
 import { LEIXLIP_SPOTS } from '../data/weatherData';
 import { LiveWeatherData, LOCATIONS } from '../services/weatherApi';
@@ -29,6 +34,8 @@ interface LeixlipLocalProps {
   onLocationChange: (loc: keyof typeof LOCATIONS) => void;
 }
 
+type RadarProvider = 'windy-radar' | 'rainviewer' | 'windy-wind' | 'windy-satellite';
+
 export const LeixlipLocal: React.FC<LeixlipLocalProps> = ({
   weather,
   loading,
@@ -37,11 +44,11 @@ export const LeixlipLocal: React.FC<LeixlipLocalProps> = ({
   onLocationChange,
 }) => {
   const [selectedSpotIndex, setSelectedSpotIndex] = useState<number>(0);
-  const [radarLayer, setRadarLayer] = useState<'rain' | 'clouds' | 'wind'>('rain');
-  const [isAnimatingRadar, setIsAnimatingRadar] = useState<boolean>(true);
+  const [radarProvider, setRadarProvider] = useState<RadarProvider>('windy-radar');
   const [forecastView, setForecastView] = useState<'hourly' | '7day'>('hourly');
 
   const spot = LEIXLIP_SPOTS[selectedSpotIndex];
+  const currentLocation = LOCATIONS[locationKey] || LOCATIONS.leixlip;
 
   // Base fallback data if live is not yet loaded
   const currentTemp = weather?.temp ?? 16.5;
@@ -59,6 +66,27 @@ export const LeixlipLocal: React.FC<LeixlipLocalProps> = ({
   const jacket = weather?.jacketRecommendation ?? 'Grand in a decent hoody or light fleece';
   const dryingRating = weather?.dryingIndexRating ?? 'Fierce Good Air (Grade 2 Optimal)';
   const dryingScore = weather?.dryingIndexScore ?? 7;
+
+  // Generate dynamic live radar embed URL based on active location and layer
+  const getRadarEmbedUrl = () => {
+    const lat = currentLocation.lat;
+    const lon = currentLocation.lon;
+
+    if (radarProvider === 'rainviewer') {
+      return `https://www.rainviewer.com/map.html?loc=${lat},${lon},8&oFa=0&oC=1&oU=0&oCS=1&oF=0&oAP=1&c=3&o=83&lm=1&layer=radar&sm=1&sn=1`;
+    }
+
+    if (radarProvider === 'windy-wind') {
+      return `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&width=750&height=480&zoom=8&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=true&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
+    }
+
+    if (radarProvider === 'windy-satellite') {
+      return `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&width=750&height=480&zoom=8&level=surface&overlay=satellite&product=satellite&menu=&message=true&marker=true&calendar=now&pressure=true&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
+    }
+
+    // Default: Windy Live Doppler Weather Radar
+    return `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&width=750&height=480&zoom=8&level=surface&overlay=radar&product=radar&menu=&message=true&marker=true&calendar=now&pressure=true&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
+  };
 
   return (
     <div className="space-y-8 pb-12">
@@ -437,109 +465,213 @@ export const LeixlipLocal: React.FC<LeixlipLocalProps> = ({
         </div>
       </div>
 
-      {/* 🛰️ 4. BENTO ROW: INTERACTIVE KILDARE LIVE RADAR VISUALIZER 🛰️ */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Layers className="w-5 h-5 text-emerald-400" />
-              Kildare &amp; Midlands Live Simulated Radar
+      {/* 🛰️ 4. BENTO ROW: GENUINE LIVE RAIN RADAR & MET ÉIREANN LAUNCHER 🛰️ */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 text-xs font-mono text-emerald-400 bg-emerald-950/70 px-3 py-1 rounded-full border border-emerald-800/60">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              Live Interactive Radar Feed Active
+            </div>
+            <h3 className="text-2xl font-black text-white flex items-center gap-2.5">
+              <Layers className="w-6 h-6 text-emerald-400" />
+              Live Rain Radar &amp; Satellite: {currentLocation.name}
             </h3>
-            <p className="text-xs text-slate-400">
-              Atlantic front tracking across Maynooth, Celbridge, Lucan &amp; Stradbally Hall
+            <p className="text-xs sm:text-sm text-slate-400">
+              Real-time Doppler precipitation radar sweeps centered on Co. Kildare ({currentLocation.lat}°N, {currentLocation.lon}°W)
             </p>
           </div>
 
-          {/* Layer toggles */}
-          <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-            {(['rain', 'clouds', 'wind'] as const).map((layer) => (
-              <button
-                key={layer}
-                onClick={() => setRadarLayer(layer)}
-                className={`px-3 py-1 rounded-lg font-medium capitalize cursor-pointer transition-colors ${
-                  radarLayer === layer
-                    ? 'bg-emerald-600 text-white font-semibold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {layer}
-              </button>
-            ))}
+          {/* Radar Provider & Layer Toggles */}
+          <div className="flex flex-wrap items-center gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+            <button
+              onClick={() => setRadarProvider('windy-radar')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 ${
+                radarProvider === 'windy-radar'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <CloudRain className="w-3.5 h-3.5" />
+              Live Rain Doppler
+            </button>
+            <button
+              onClick={() => setRadarProvider('rainviewer')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 ${
+                radarProvider === 'rainviewer'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Tv className="w-3.5 h-3.5" />
+              RainViewer Grid
+            </button>
+            <button
+              onClick={() => setRadarProvider('windy-wind')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 ${
+                radarProvider === 'windy-wind'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Wind className="w-3.5 h-3.5" />
+              Atlantic Wind Stream
+            </button>
+            <button
+              onClick={() => setRadarProvider('windy-satellite')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 ${
+                radarProvider === 'windy-satellite'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Satellite className="w-3.5 h-3.5" />
+              Live Satellite IR
+            </button>
           </div>
         </div>
 
-        {/* Radar Screen Map */}
-        <div className="relative h-72 sm:h-80 w-full bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden flex items-center justify-center p-4">
-          {/* Grid lines */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-30" />
+        {/* Live Interactive Radar Frame */}
+        <div className="relative rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-950 shadow-2xl">
+          <iframe
+            key={`${radarProvider}-${currentLocation.lat}-${currentLocation.lon}`}
+            src={getRadarEmbedUrl()}
+            title="Live Rain Radar for Kildare"
+            className="w-full h-[450px] sm:h-[520px] border-0"
+            loading="lazy"
+            allowFullScreen
+          />
 
-          {/* Sweeping Radar Beam */}
-          {isAnimatingRadar && (
-            <div className="absolute inset-0 origin-center animate-spin pointer-events-none opacity-40" style={{ animationDuration: '8s' }}>
-              <div className="w-1/2 h-1/2 bg-gradient-to-tr from-emerald-500/30 to-transparent transform -rotate-45" />
+          {/* Quick info bar overlay on bottom */}
+          <div className="bg-slate-950/95 border-t border-slate-800 p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-slate-300">
+              <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>
+                Target Focus: <strong className="text-white">{currentLocation.name}</strong> ({currentLocation.county})
+              </span>
+              <span className="text-slate-600 hidden sm:inline">•</span>
+              <span className="text-slate-400 hidden sm:inline">
+                Interactive: Drag map to pan, scroll to zoom, click bottom play button to animate radar history.
+              </span>
             </div>
-          )}
 
-          {/* Simulated Rain Clouds / Wind Streams */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {radarLayer === 'rain' && (
-              <>
-                <div className="absolute top-1/4 left-1/3 w-48 h-32 bg-sky-500/20 rounded-full blur-2xl animate-pulse" />
-                <div className="absolute top-1/2 left-1/2 w-64 h-40 bg-emerald-500/15 rounded-full blur-3xl" />
-              </>
-            )}
-            {radarLayer === 'clouds' && (
-              <div className="absolute inset-0 bg-slate-400/10 blur-xl" />
-            )}
-            {radarLayer === 'wind' && (
-              <div className="absolute inset-0 bg-gradient-to-r from-teal-500/10 to-transparent animate-pulse" />
-            )}
+            {/* Live Rain Scale Indicator */}
+            <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-400">
+              <span>Rain:</span>
+              <span className="px-1.5 py-0.5 rounded bg-sky-900/60 text-sky-300 border border-sky-700/50">Drizzle</span>
+              <span className="px-1.5 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-700/50">Moderate</span>
+              <span className="px-1.5 py-0.5 rounded bg-amber-900/60 text-amber-300 border border-amber-700/50">Heavy</span>
+              <span className="px-1.5 py-0.5 rounded bg-rose-900/60 text-rose-300 border border-rose-700/50">Lashing</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 🔗 DIRECT OFFICIAL RADAR LINKS & BROADCAST LAUNCH CARDS 🔗 */}
+        <div className="space-y-3 pt-2">
+          <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            Direct High-Resolution Irish Radar Launchers (External Full-Screen):
           </div>
 
-          {/* Map Node Points */}
-          <div className="relative z-10 w-full max-w-xl h-full flex flex-col justify-between py-6 px-4">
-            {/* North: Maynooth / Confey */}
-            <div className="flex justify-between items-center text-xs">
-              <div className="flex items-center gap-1.5 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300">
-                <span className="w-2 h-2 rounded-full bg-sky-400" /> Maynooth ({Math.round((currentTemp - 0.5) * 10) / 10}°C)
-              </div>
-              <div className="flex items-center gap-1.5 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" /> Confey / Canal ({Math.round((currentTemp - 0.3) * 10) / 10}°C)
-              </div>
-            </div>
-
-            {/* Center: LEIXLIP PIN */}
-            <div className="flex items-center justify-center">
-              <div className="relative group cursor-pointer" onClick={() => onLocationChange('leixlip')}>
-                <div className="absolute -inset-2 bg-emerald-500/30 rounded-full blur-md animate-ping" />
-                <div className="relative flex items-center gap-2 bg-emerald-600 text-slate-950 font-black px-4 py-2 rounded-full shadow-lg border border-emerald-300 text-xs sm:text-sm">
-                  <MapPin className="w-4 h-4" /> LEIXLIP STATION ({currentTemp}°C)
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Met Éireann National Radar */}
+            <a
+              href="https://www.met.ie/forecasts/radar"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-emerald-500/60 hover:bg-slate-900/90 transition-all flex flex-col justify-between group shadow-md"
+            >
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-400">Met Éireann Official</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-400 transition-colors" />
                 </div>
+                <h4 className="text-sm font-extrabold text-white group-hover:text-emerald-300 transition-colors">
+                  National Doppler Radar
+                </h4>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  Shannon &amp; Dublin Airport dual-polarisation radar with 5-minute rain sweeps.
+                </p>
               </div>
-            </div>
-
-            {/* South: Celbridge / Stradbally Direction */}
-            <div className="flex justify-between items-center text-xs">
-              <div className="flex items-center gap-1.5 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300">
-                <span className="w-2 h-2 rounded-full bg-sky-400" /> Celbridge / Castletown
+              <div className="mt-3 text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+                Open Met.ie Radar &rarr;
               </div>
-              <button
-                onClick={() => onLocationChange('stradbally')}
-                className="flex items-center gap-1.5 bg-amber-950/90 hover:bg-amber-900 px-2.5 py-1 rounded-lg border border-amber-600/50 text-amber-300 cursor-pointer transition-colors"
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-400" /> &darr; Stradbally Hall (Electric Picnic)
-              </button>
-            </div>
-          </div>
+            </a>
 
-          {/* Radar details badge */}
-          <div className="absolute bottom-3 right-3 text-[10px] font-mono text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded border border-slate-800 flex items-center gap-2">
-            <span>Sweep: Active</span>
-            <span>•</span>
-            <span>Layer: {radarLayer.toUpperCase()}</span>
+            {/* RainViewer Leixlip Live Map */}
+            <a
+              href="https://www.rainviewer.com/weather-radar-map-live/leixlip-ireland.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-sky-500/60 hover:bg-slate-900/90 transition-all flex flex-col justify-between group shadow-md"
+            >
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-sky-400">RainViewer Live</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-400 transition-colors" />
+                </div>
+                <h4 className="text-sm font-extrabold text-white group-hover:text-sky-300 transition-colors">
+                  Leixlip Radar &amp; Clouds
+                </h4>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  HD composite rain map with precipitation nowcasting up to 2 hours ahead.
+                </p>
+              </div>
+              <div className="mt-3 text-[11px] text-sky-400 font-semibold flex items-center gap-1">
+                Open RainViewer &rarr;
+              </div>
+            </a>
+
+            {/* Windy Interactive Doppler */}
+            <a
+              href={`https://www.windy.com/?${currentLocation.lat},${currentLocation.lon},9`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-amber-500/60 hover:bg-slate-900/90 transition-all flex flex-col justify-between group shadow-md"
+            >
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-400">Windy Full App</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
+                </div>
+                <h4 className="text-sm font-extrabold text-white group-hover:text-amber-300 transition-colors">
+                  Full Kildare 3D Radar
+                </h4>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  ECMWF + GFS wind gusts, cloud layers, isobar pressures, and lightning strikes.
+                </p>
+              </div>
+              <div className="mt-3 text-[11px] text-amber-400 font-semibold flex items-center gap-1">
+                Open Windy 3D Map &rarr;
+              </div>
+            </a>
+
+            {/* Met Éireann Warnings & Rainfall Alerts */}
+            <a
+              href="https://www.met.ie/warnings"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-teal-500/60 hover:bg-slate-900/90 transition-all flex flex-col justify-between group shadow-md"
+            >
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-teal-400">Official Warnings</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-400 transition-colors" />
+                </div>
+                <h4 className="text-sm font-extrabold text-white group-hover:text-teal-300 transition-colors">
+                  Kildare &amp; Midlands Alerts
+                </h4>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  Yellow/Orange/Red weather advisories, flood monitoring &amp; wind alerts.
+                </p>
+              </div>
+              <div className="mt-3 text-[11px] text-teal-400 font-semibold flex items-center gap-1">
+                Check Warnings &rarr;
+              </div>
+            </a>
           </div>
         </div>
       </div>
     </div>
   );
 };
+
