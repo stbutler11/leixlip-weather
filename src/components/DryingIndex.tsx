@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Shirt, Wind, Sun, Clock, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react';
-import { CURRENT_LEIXLIP_CONDITIONS } from '../data/weatherData';
+import { Shirt, Wind, Sun, Clock, CheckCircle2, AlertTriangle, Sparkles, Droplets } from 'lucide-react';
+import { LiveWeatherData } from '../services/weatherApi';
 
 interface LaundryItem {
   name: string;
   category: string;
-  dryingTimeHours: number;
+  baseDryingTimeHours: number;
   riskLevel: 'Low' | 'Moderate' | 'High';
   note: string;
 }
@@ -14,43 +14,59 @@ const LAUNDRY_ITEMS: LaundryItem[] = [
   {
     name: 'Bed Sheets & Duvet Covers',
     category: 'Linens',
-    dryingTimeHours: 2.2,
+    baseDryingTimeHours: 2.2,
     riskLevel: 'Low',
     note: 'Optimal wind catching. Will billow gracefully like sails in St. Catherine’s park.',
   },
   {
     name: 'Heavy Denim Jeans',
     category: 'Heavywear',
-    dryingTimeHours: 4.5,
+    baseDryingTimeHours: 4.5,
     riskLevel: 'Moderate',
     note: 'Pockets will stay slightly damp unless flipped inside out at 1:30pm.',
   },
   {
     name: 'Electric Picnic Wellies & Wool Socks',
     category: 'Festival Prep',
-    dryingTimeHours: 3.0,
+    baseDryingTimeHours: 3.0,
     riskLevel: 'Low',
     note: 'Stuff with newspaper and place near the rotary line breeze for prime prep.',
   },
   {
     name: 'Tea Towels & T-Shirts',
     category: 'Everyday',
-    dryingTimeHours: 1.5,
+    baseDryingTimeHours: 1.5,
     riskLevel: 'Low',
     note: 'Crisp, fresh, smelling of Kildare rain air.',
   },
   {
     name: 'Heavy Fleece Festival Hoodies',
     category: 'Outerwear',
-    dryingTimeHours: 5.0,
+    baseDryingTimeHours: 5.0,
     riskLevel: 'High',
     note: 'Watch the Maynooth clouds. You may need to finish them on the clothes horse by the radiator.',
   },
 ];
 
-export const DryingIndex: React.FC = () => {
+interface DryingIndexProps {
+  weather?: LiveWeatherData | null;
+}
+
+export const DryingIndex: React.FC<DryingIndexProps> = ({ weather }) => {
   const [selectedItemIndex, setSelectedItemIndex] = useState<number>(0);
   const selectedLaundry = LAUNDRY_ITEMS[selectedItemIndex];
+
+  const dryingScore = weather?.dryingIndexScore ?? 7;
+  const dryingRating = weather?.dryingIndexRating ?? 'Fierce Good Air (Grade 2 Optimal)';
+  const dryingAdvice = weather?.dryingAdvice ?? 'Rotary line is spinning nicely. Bed sheets will billow and dry in 3 hours.';
+  const windKmh = weather?.windSpeedKmh ?? 19;
+  const temp = weather?.temp ?? 16.5;
+  const humidity = weather?.humidity ?? 74;
+  const cloudCover = weather?.cloudCoverPercent ?? 68;
+
+  // Calculate dynamic dry time multiplier based on live score (10 = 0.7x faster, 1 = 2.5x slower)
+  const timeMultiplier = dryingScore >= 8 ? 0.75 : dryingScore >= 6 ? 1.0 : dryingScore >= 4 ? 1.4 : 2.2;
+  const calculatedDryTime = Math.round(selectedLaundry.baseDryingTimeHours * timeMultiplier * 10) / 10;
 
   return (
     <div className="space-y-8 pb-12">
@@ -71,22 +87,23 @@ export const DryingIndex: React.FC = () => {
       <div className="bg-gradient-to-br from-emerald-950/80 via-slate-900 to-slate-950 border border-emerald-500/40 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
           <div className="space-y-1">
-            <span className="text-xs uppercase font-mono text-emerald-400 font-bold">
-              Current Rotary Clothesline Verdict
+            <span className="text-xs uppercase font-mono text-emerald-400 font-bold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              Live Clothesline Telemetry • Open-Meteo Model
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
-              Grade 2 Drying: &ldquo;Fierce Good Air&rdquo;
+              {dryingRating}
             </h2>
             <p className="text-slate-300 text-sm">
-              Score: <strong className="text-emerald-400">{CURRENT_LEIXLIP_CONDITIONS.dryingIndexScore}/10</strong> • {CURRENT_LEIXLIP_CONDITIONS.dryingIndexRating}
+              Current Index Score: <strong className="text-emerald-400 text-base">{dryingScore}/10</strong> • {dryingAdvice}
             </p>
           </div>
 
           <div className="flex items-center gap-3 bg-slate-950 px-5 py-3.5 rounded-2xl border border-slate-800">
             <Wind className="w-8 h-8 text-sky-400 animate-pulse" />
             <div>
-              <div className="text-sm font-bold text-white">19 km/h Southerly Breeze</div>
-              <div className="text-xs text-slate-400">Evaporation Rate: 3.4 mm/hr</div>
+              <div className="text-sm font-bold text-white">{windKmh} km/h Irish Breeze</div>
+              <div className="text-xs text-slate-400">Temp: {temp}°C • Humidity: {humidity}%</div>
             </div>
           </div>
         </div>
@@ -95,18 +112,28 @@ export const DryingIndex: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1.5">
             <div className="text-xs text-slate-400 font-medium">Breeze Factor</div>
-            <div className="text-lg font-bold text-emerald-400">Steady &amp; Healthy</div>
-            <p className="text-xs text-slate-400">Clothes will spin nicely without ripping off the wooden pegs.</p>
+            <div className="text-lg font-bold text-emerald-400">
+              {windKmh >= 15 ? 'Steady & Healthy' : 'Light Drift'}
+            </div>
+            <p className="text-xs text-slate-400">
+              {windKmh >= 15
+                ? 'Clothes will spin nicely without ripping off the wooden pegs.'
+                : 'Pockets will need a bit of extra patience.'}
+            </p>
           </div>
           <div className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1.5">
-            <div className="text-xs text-slate-400 font-medium">Cloud Cover Risk</div>
-            <div className="text-lg font-bold text-amber-400">68% Mackerel Sky</div>
-            <p className="text-xs text-slate-400">High clouds keep the air warm without immediate rain threat.</p>
+            <div className="text-xs text-slate-400 font-medium">Cloud Cover Factor</div>
+            <div className="text-lg font-bold text-amber-400">{cloudCover}% Cloud Cover</div>
+            <p className="text-xs text-slate-400">
+              {cloudCover < 50
+                ? 'Great direct sunlight helping evaporation.'
+                : 'High clouds keep the air warm without immediate rain threat.'}
+            </p>
           </div>
           <div className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1.5">
-            <div className="text-xs text-slate-400 font-medium">Window of Opportunity</div>
-            <div className="text-lg font-bold text-sky-400">10:00 AM – 3:30 PM</div>
-            <p className="text-xs text-slate-400">Pull the towels in by 4pm as evening damp sets in over the canal.</p>
+            <div className="text-xs text-slate-400 font-medium">Recommended Window</div>
+            <div className="text-lg font-bold text-sky-400">10:00 AM – 4:30 PM</div>
+            <p className="text-xs text-slate-400">Pull the towels in by tea time as evening damp sets in over the canal.</p>
           </div>
         </div>
       </div>
@@ -124,6 +151,7 @@ export const DryingIndex: React.FC = () => {
             <span className="text-xs text-slate-400 font-semibold uppercase">Select Laundry Load:</span>
             {LAUNDRY_ITEMS.map((item, idx) => {
               const isSelected = selectedItemIndex === idx;
+              const itemDryTime = Math.round(item.baseDryingTimeHours * timeMultiplier * 10) / 10;
               return (
                 <button
                   key={item.name}
@@ -139,7 +167,7 @@ export const DryingIndex: React.FC = () => {
                     <div className="text-[11px] text-slate-400">{item.category}</div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-bold text-amber-400">~{item.dryingTimeHours} hrs</span>
+                    <span className="text-xs font-bold text-amber-400">~{itemDryTime} hrs</span>
                   </div>
                 </button>
               );
@@ -150,14 +178,17 @@ export const DryingIndex: React.FC = () => {
           <div className="lg:col-span-6 p-6 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between space-y-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                <span className="text-xs font-mono uppercase text-emerald-400">Estimated Dry Time</span>
+                <span className="text-xs font-mono uppercase text-emerald-400">Live Estimated Dry Time</span>
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-900 border border-slate-700 text-slate-300">
                   Risk: {selectedLaundry.riskLevel}
                 </span>
               </div>
 
-              <div className="text-3xl font-black text-white">
-                {selectedLaundry.dryingTimeHours} Hours
+              <div className="text-4xl font-black text-white flex items-baseline gap-2">
+                <span>{calculatedDryTime} Hours</span>
+                <span className="text-xs font-normal text-emerald-400 font-mono">
+                  ({dryingScore >= 7 ? 'Fast speed' : 'Standard pace'})
+                </span>
               </div>
 
               <p className="text-sm text-slate-300 leading-relaxed">

@@ -8,17 +8,28 @@ import {
   BookOpen, 
   HelpCircle, 
   Sliders, 
-  Volume2
+  Volume2,
+  RefreshCw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { soundFX } from '../utils/audioSynth';
+import { LiveWeatherData } from '../services/weatherApi';
 
 interface NavbarProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
+  liveWeather?: LiveWeatherData | null;
+  onRefreshWeather?: () => void;
+  isLoadingWeather?: boolean;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
+export const Navbar: React.FC<NavbarProps> = ({ 
+  activeTab, 
+  setActiveTab, 
+  liveWeather,
+  onRefreshWeather,
+  isLoadingWeather 
+}) => {
   const handleGrandCelebration = () => {
     soundFX.playGrandChime();
     soundFX.speakVerdict("Official Leixlip Weather verdict for Electric Picnic 2026: It'll be grand!");
@@ -72,14 +83,32 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${liveWeather?.isLive ? 'bg-emerald-400' : 'bg-amber-400'} opacity-75`}></span>
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${liveWeather?.isLive ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
             </span>
             <span className="font-semibold text-emerald-400 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5" /> LEIXLIP, CO. KILDARE
+              <MapPin className="w-3.5 h-3.5" /> {liveWeather ? `${liveWeather.locationName.toUpperCase()}, ${liveWeather.county.toUpperCase()}` : 'LEIXLIP, CO. KILDARE'}
             </span>
             <span className="text-slate-500 hidden sm:inline">|</span>
-            <span className="text-slate-200">16.5°C • Fierce Mild • Rye River Breezes</span>
+            <span className="text-slate-200 font-medium">
+              {liveWeather ? (
+                <>
+                  <strong className="text-emerald-300">{liveWeather.temp}°C</strong> • {liveWeather.irishWeatherState} • {liveWeather.windSpeedKmh} km/h wind
+                </>
+              ) : (
+                '16.5°C • Fierce Mild • Rye River Breezes'
+              )}
+            </span>
+            {onRefreshWeather && (
+              <button
+                onClick={onRefreshWeather}
+                disabled={isLoadingWeather}
+                title="Fetch latest Open-Meteo readings (Free & No Auth)"
+                className="ml-1 text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${isLoadingWeather ? 'animate-spin text-emerald-400' : ''}`} />
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
